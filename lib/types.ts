@@ -7,6 +7,7 @@ export interface BlackCard {
 
 export interface WhiteCard {
   text: string;
+  pack?: string;
 }
 
 export interface Player {

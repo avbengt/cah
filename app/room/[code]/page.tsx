@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { usePusherChannel } from "@/lib/usePusher";
 import { GamePhase, WhiteCard } from "@/lib/types";
+import { PackFooter } from "@/components/PackFooter";
 
 interface PlayerInfo {
   id: string;
@@ -125,6 +126,14 @@ export default function RoomPage() {
     setSubmitting(false);
   }
 
+  async function endGame() {
+    await fetch("/api/room/end", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomCode, playerId }),
+    });
+  }
+
   async function judgeWinner(winnerId: string) {
     setSubmitting(true);
     await fetch("/api/room/judge", {
@@ -147,11 +156,16 @@ export default function RoomPage() {
   }
 
   function formatBlackCard(text: string, cards: WhiteCard[]) {
+    const blankHtml = '<span class="card-blank"></span>';
+    if (cards.length === 0) {
+      return text.replace(/_+/g, blankHtml);
+    }
     let result = text;
     for (const card of cards) {
-      result = result.replace("_", `<strong>${card.text}</strong>`);
+      result = result.replace(/_+/, `<strong>${card.text}</strong>`);
     }
-    return result;
+    /* Replace any remaining blanks (e.g. pick 1 but card has 2 blanks) */
+    return result.replace(/_+/g, blankHtml);
   }
 
   if (!game || !playerId) {
@@ -166,31 +180,48 @@ export default function RoomPage() {
   const isCzar = game.czarId === playerId;
   const isHost = me?.isHost ?? false;
   const nonCzarCount = game.players.filter((p) => p.id !== game.czarId).length;
+  const czar = game.players.find((p) => p.id === game.czarId);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-zinc-950 border-b border-zinc-800 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="font-bold text-white">Room: <span className="font-mono tracking-widest">{roomCode}</span></span>
-          {game.phase !== "lobby" && (
-            <span className="text-zinc-400 text-sm">Round {game.roundNumber}</span>
-          )}
+    <div className="min-h-screen flex">
+      {/* Left sidebar: players */}
+      <aside className="w-50 shrink-0 bg-zinc-950 border-r border-zinc-800 p-4 flex flex-col gap-4">
+        <div>
+          <p className="font-bold text-white text-xl leading-none mb-6">Shmards<br />Against<br />Shmumanity</p>
+          <p className="font-bold text-white text-sm">Room</p>
+          <p className="font-mono text-white tracking-widest text-lg">{roomCode}</p>
         </div>
-        <div className="flex items-center gap-3">
-          {game.players.map((p) => (
-            <div
-              key={p.id}
-              className={`text-xs px-2 py-1 rounded-sm ${p.id === playerId ? "bg-white text-black font-bold" : "bg-zinc-800 text-zinc-300"} ${p.id === game.czarId && game.phase !== "lobby" ? "ring-2 ring-yellow-400" : ""}`}
-              title={p.id === game.czarId ? "Card Czar" : ""}
-            >
-              {p.name} · {p.score}
-            </div>
-          ))}
+        {game.phase !== "lobby" && (
+          <div>
+            <p className="text-zinc-400 text-xs">Round {game.roundNumber}</p>
+          </div>
+        )}
+        <div className="flex-1">
+          <p className="text-zinc-400 text-xs font-medium mb-2">Players</p>
+          <div className="space-y-1">
+            {game.players.map((p) => (
+              <div
+                key={p.id}
+                className={`text-sm py-1.5 px-2 rounded-sm truncate ${p.id === playerId ? "bg-white text-black font-bold" : "bg-zinc-800 text-zinc-300"} ${p.id === game.czarId && game.phase !== "lobby" ? "ring-2 ring-yellow-400" : ""}`}
+                title={p.id === game.czarId ? "Card Czar" : p.isHost ? "Host" : undefined}
+              >
+                {p.name}{p.isHost && " ★"} · {p.score}
+              </div>
+            ))}
+          </div>
         </div>
-      </header>
+        {isHost && game.phase !== "lobby" && game.phase !== "ended" && (
+          <button
+            onClick={endGame}
+            className="w-full text-xs text-zinc-500 hover:text-red-400 hover:bg-zinc-900 py-2 px-2 rounded-sm transition-colors text-left"
+          >
+            End game
+          </button>
+        )}
+      </aside>
 
-      <div className="flex-1 p-6 max-w-4xl mx-auto w-full">
+      {/* Main content: game */}
+      <main className="flex-1 min-w-0 p-6 flex flex-col">
 
         {/* LOBBY */}
         {game.phase === "lobby" && (
@@ -198,15 +229,6 @@ export default function RoomPage() {
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-2">Waiting for players...</h2>
               <p className="text-zinc-400">Share the room code: <span className="font-mono text-white text-2xl tracking-widest">{roomCode}</span></p>
-            </div>
-            <div className="bg-zinc-800 rounded-sm p-4 w-full max-w-sm">
-              <h3 className="text-sm text-zinc-400 mb-3">Players ({game.players.length})</h3>
-              {game.players.map((p) => (
-                <div key={p.id} className="flex items-center justify-between py-2 border-b border-zinc-700 last:border-0">
-                  <span>{p.name}</span>
-                  {p.isHost && <span className="text-xs text-zinc-400">Host</span>}
-                </div>
-              ))}
             </div>
             {isHost && (
               <button
@@ -224,14 +246,20 @@ export default function RoomPage() {
         {/* PICKING / JUDGING / RESULTS */}
         {(game.phase === "picking" || game.phase === "judging" || game.phase === "results") && game.blackCard && (
           <div className="space-y-6">
-            {/* Black card */}
-            <div className="bg-black border border-zinc-700 rounded-sm p-6 max-w-md">
-              <p className="text-white text-xl font-bold leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: formatBlackCard(game.blackCard.text, []) }}
-              />
-              {game.blackCard.pick > 1 && (
-                <p className="text-zinc-400 text-sm mt-2">Pick {game.blackCard.pick}</p>
-              )}
+            <div className="mt-6 space-y-2">
+              <p className="text-zinc-400 text-sm">
+                Card Czar: <span className="text-white font-bold">{czar?.name ?? "—"}</span>
+              </p>
+
+              {/* Black card */}
+              <div className="card-font w-[200px] aspect-[2.5/3.5] bg-black border border-zinc-700 rounded-[12px] p-4 flex flex-col justify-start">
+                <p className="text-white text-lg leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: formatBlackCard(game.blackCard.text, []) }}
+                />
+                {game.blackCard.pick > 1 && (
+                  <p className="text-zinc-400 text-sm mt-2">Pick {game.blackCard.pick}</p>
+                )}
+              </div>
             </div>
 
             {/* Status */}
@@ -240,8 +268,8 @@ export default function RoomPage() {
                 isCzar
                   ? `Waiting for players... (${game.playedCount}/${nonCzarCount} played)`
                   : hasPlayed
-                  ? `Waiting for others... (${game.playedCount}/${nonCzarCount} played)`
-                  : `Choose ${game.blackCard.pick} card${game.blackCard.pick > 1 ? "s" : ""}`
+                    ? `Waiting for others... (${game.playedCount}/${nonCzarCount} played)`
+                    : `Choose ${game.blackCard.pick} card${game.blackCard.pick > 1 ? "s" : ""}`
               )}
               {game.phase === "judging" && (isCzar ? "Pick the winner!" : "Waiting for the Czar to judge...")}
               {game.phase === "results" && (() => {
@@ -261,19 +289,19 @@ export default function RoomPage() {
             {game.phase === "judging" && (
               <div className="space-y-3">
                 <h3 className="text-sm text-zinc-400 font-medium">Played cards</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] justify-items-start gap-x-1 gap-y-3">
                   {game.played.map((entry, i) => (
                     <button
                       key={i}
                       onClick={() => isCzar && !submitting && judgeWinner(entry.playerId)}
                       disabled={!isCzar || submitting}
-                      className={`bg-white text-black p-4 rounded-sm text-left font-medium transition-all ${
-                        isCzar ? "hover:ring-2 hover:ring-yellow-400 cursor-pointer" : "cursor-default"
-                      }`}
+                      className={`card-font relative w-full max-w-[150px] aspect-[2.5/3.5] bg-white text-black p-4 rounded-[12px] text-left transition-all overflow-hidden flex flex-col justify-start ${isCzar ? "cursor-pointer" : "cursor-default"
+                        }`}
                     >
                       {entry.cards.map((c, j) => (
-                        <p key={j}>{c.text}</p>
+                        <p key={j} className="text-sm">{c.text}</p>
                       ))}
+                      <PackFooter pack={entry.cards[0]?.pack} />
                     </button>
                   ))}
                 </div>
@@ -282,11 +310,11 @@ export default function RoomPage() {
 
             {/* Results: highlight winner */}
             {game.phase === "results" && game.winnerId && (
-              <div className="bg-zinc-800 border border-yellow-400 rounded-sm p-4">
-                <p className="text-yellow-400 text-sm font-bold mb-2">
+              <div className="card-font w-full max-w-[200px] aspect-[2.5/3.5] bg-zinc-800 border border-yellow-400 rounded-[12px] p-4 flex flex-col justify-start">
+                <p className="text-yellow-400 text-sm mb-2">
                   {game.players.find((p) => p.id === game.winnerId)?.name} wins with:
                 </p>
-                <p className="text-white font-bold"
+                <p className="text-white text-lg"
                   dangerouslySetInnerHTML={{
                     __html: formatBlackCard(
                       game.blackCard.text,
@@ -301,7 +329,7 @@ export default function RoomPage() {
             {!isCzar && game.phase === "picking" && !hasPlayed && (
               <div className="space-y-3">
                 <h3 className="text-sm text-zinc-400 font-medium">Your hand</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] justify-items-start gap-x-1 gap-y-3">
                   {game.hand.map((card, i) => {
                     const isSelected = selected.some((c) => c.text === card.text);
                     const selIdx = selected.findIndex((c) => c.text === card.text);
@@ -309,16 +337,16 @@ export default function RoomPage() {
                       <button
                         key={i}
                         onClick={() => toggleCard(card)}
-                        className={`bg-white text-black p-3 rounded-sm text-left text-sm font-medium transition-all relative ${
-                          isSelected ? "ring-2 ring-yellow-400 opacity-100" : "opacity-90 hover:opacity-100 hover:ring-2 hover:ring-white"
-                        }`}
+                        className={`card-font relative w-full max-w-[150px] aspect-[2.5/3.5] bg-white text-black p-4 rounded-[12px] text-left text-sm transition-all overflow-hidden flex flex-col justify-start ${isSelected ? "ring-2 ring-yellow-400 opacity-100" : "opacity-90 hover:opacity-100"
+                          }`}
                       >
                         {game.blackCard!.pick > 1 && isSelected && (
                           <span className="absolute top-1 right-1 bg-yellow-400 text-black text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
                             {selIdx + 1}
                           </span>
                         )}
-                        {card.text}
+                        <span className="line-clamp-6">{card.text}</span>
+                        <PackFooter pack={card.pack} />
                       </button>
                     );
                   })}
@@ -338,10 +366,14 @@ export default function RoomPage() {
             {!isCzar && game.phase === "picking" && hasPlayed && (
               <div className="space-y-3">
                 <h3 className="text-sm text-zinc-400 font-medium">Your hand</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] justify-items-start gap-x-1 gap-y-3">
                   {game.hand.map((card, i) => (
-                    <div key={i} className="bg-white text-black p-3 rounded-sm text-sm font-medium opacity-60">
-                      {card.text}
+                    <div
+                      key={i}
+                      className="card-font relative w-full max-w-[150px] aspect-[2.5/3.5] bg-white text-black p-4 rounded-[12px] text-sm opacity-60 overflow-hidden flex flex-col justify-start"
+                    >
+                      <span className="line-clamp-6">{card.text}</span>
+                      <PackFooter pack={card.pack} />
                     </div>
                   ))}
                 </div>
@@ -359,15 +391,6 @@ export default function RoomPage() {
               </h2>
               <p className="text-zinc-400">The game is over</p>
             </div>
-            <div className="bg-zinc-800 rounded-sm p-4 w-full max-w-sm">
-              <h3 className="text-sm text-zinc-400 mb-3">Final scores</h3>
-              {[...game.players].sort((a, b) => b.score - a.score).map((p) => (
-                <div key={p.id} className="flex items-center justify-between py-2 border-b border-zinc-700 last:border-0">
-                  <span className={p.id === game.winnerId ? "font-bold text-yellow-400" : ""}>{p.name}</span>
-                  <span className={p.id === game.winnerId ? "font-bold text-yellow-400" : "text-zinc-300"}>{p.score} pts</span>
-                </div>
-              ))}
-            </div>
             <button
               onClick={() => router.push("/")}
               className="bg-white text-black font-bold py-3 px-8 rounded-sm hover:bg-zinc-200 transition-colors"
@@ -376,7 +399,7 @@ export default function RoomPage() {
             </button>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

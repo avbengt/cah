@@ -23,7 +23,7 @@ async function fetchPacks(packNames: string[]) {
     p.black.map((c) => ({ text: c.text, pick: c.pick }))
   );
   const whiteCards: WhiteCard[] = selected.flatMap((p) =>
-    p.white.map((c) => ({ text: c.text }))
+    p.white.map((c) => ({ text: c.text, pack: p.name }))
   );
 
   return { blackCards, whiteCards };

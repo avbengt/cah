@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cards Against Humanity Online",
+  title: "Shmards Against Shmumanity",
   description: "Play Cards Against Humanity with friends online",
 };
 

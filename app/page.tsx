@@ -40,7 +40,7 @@ export default function Home() {
       <div className="w-full max-w-md">
         <div className="mb-10 text-center">
           <div className="inline-block bg-white text-black font-bold text-3xl px-6 py-4 rounded-sm shadow-lg mb-3">
-            Cards Against<br />Humanity
+            Shmards Against<br />Shmumanity
           </div>
           <p className="text-zinc-400 text-sm">A party game for horrible people</p>
         </div>
