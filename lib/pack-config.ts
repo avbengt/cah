@@ -47,7 +47,6 @@ export const packConfig: Record<string, PackConfigEntry> = {
   "CAH: Ass Pack": { label: "Ass Pack", badgeImg: "/images/icons/icon-ass.svg", badgeImgClass: "w-[8px] h-[8px] bottom-[10px] !right-[4px] rotate-10" },
   "CAH: College Pack": { label: "College", badgeImg: "/images/icons/icon-college.svg", badgeImgClass: "w-[8px] h-[8px] bottom-[10px] !right-[4px] rotate-10" },
   "CAH: Human Pack": { label: "Human Pack", badgeImg: "/images/icons/icon-human.svg", badgeImgClass: "w-[8px] h-[8px] bottom-[10px] !right-[4px] rotate-10" },
-  "CAH: Procedurally-Generated Cards": { label: "Procedural" },
   "CAH: Hidden Gems Bundle: A Few New Cards We Crammed Into This Bundle Pack (Amazon Exclusive)": { label: "Hidden Gems" },
   "Dad Pack": { label: "Dad Pack", badgeImg: "/images/icons/icon-dad.svg", badgeImgClass: "w-[8px] h-[8px] bottom-[10px] !right-[4px] rotate-10" },
   "Fantasy Pack": { label: "Fantasy", badgeImg: "/images/icons/icon-fantasy.svg", badgeImgClass: "w-[8px] h-[8px] bottom-[10px] !right-[4px] rotate-10" },

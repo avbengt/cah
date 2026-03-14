@@ -16,6 +16,8 @@ export interface Player {
   score: number;
   isHost: boolean;
   hand: WhiteCard[];
+  inactive?: boolean;
+  inactiveAt?: number;
 }
 
 export interface PlayedEntry {

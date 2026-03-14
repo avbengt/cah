@@ -1,4 +1,3 @@
-import { nextCzar, startRound } from "@/lib/game";
 import { pusherServer } from "@/lib/pusher";
 import { getGame, saveGame } from "@/lib/redis";
 import { NextRequest, NextResponse } from "next/server";
@@ -35,7 +34,7 @@ export async function POST(req: NextRequest) {
     await pusherServer.trigger(`room-${roomCode}`, "game-ended", {
       winnerId,
       winnerName: gameWinner.name,
-      players: updatedPlayers.map((p) => ({ id: p.id, name: p.name, score: p.score })),
+      players: updatedPlayers.filter((p) => !p.inactive).map((p) => ({ id: p.id, name: p.name, score: p.score })),
     });
     return NextResponse.json({ ok: true });
   }
@@ -54,32 +53,7 @@ export async function POST(req: NextRequest) {
     winnerId,
     winnerName: winner.name,
     winnerCardText,
-    players: updatedPlayers.map((p) => ({ id: p.id, name: p.name, score: p.score, isHost: p.isHost })),
-  });
-
-  // Automatically advance to next round after 5 seconds
-  await new Promise((r) => setTimeout(r, 5000));
-
-  const newCzarId = nextCzar({ ...afterJudge });
-  const nextGame = startRound({
-    ...afterJudge,
-    czarId: newCzarId,
-    roundNumber: afterJudge.roundNumber + 1,
-  });
-  await saveGame(nextGame);
-
-  for (const p of nextGame.players) {
-    await pusherServer.trigger(`private-player-${p.id}`, "hand-updated", {
-      hand: p.hand,
-    });
-  }
-
-  await pusherServer.trigger(`room-${roomCode}`, "round-started", {
-    phase: nextGame.phase,
-    czarId: nextGame.czarId,
-    blackCard: nextGame.blackCard,
-    roundNumber: nextGame.roundNumber,
-    players: nextGame.players.map((p) => ({ id: p.id, name: p.name, score: p.score, isHost: p.isHost })),
+    players: updatedPlayers.filter((p) => !p.inactive).map((p) => ({ id: p.id, name: p.name, score: p.score, isHost: p.isHost })),
   });
 
   return NextResponse.json({ ok: true });

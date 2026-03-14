@@ -18,8 +18,8 @@ export function usePusherChannel(
     const channel = pusherClient.subscribe(channelName);
     channelRef.current = channel;
 
-    for (const [event, handler] of Object.entries(eventsRef.current)) {
-      channel.bind(event, handler);
+    for (const event of Object.keys(eventsRef.current)) {
+      channel.bind(event, (data: unknown) => eventsRef.current[event]?.(data));
     }
 
     return () => {

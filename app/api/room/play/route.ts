@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
   // Tell everyone how many have played (no card content revealed)
   await pusherServer.trigger(`room-${roomCode}`, "play-submitted", {
     playedCount: finalGame.played.length,
-    totalNeeded: game.players.filter((p) => p.id !== game.czarId).length,
+    totalNeeded: game.players.filter((p) => p.id !== game.czarId && !p.inactive).length,
+    playerId,
   });
 
   if (everyonePlayed) {

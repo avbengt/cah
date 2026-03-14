@@ -56,7 +56,6 @@ const packCategories: { label: string; packs: string[] }[] = [
       "CAH: Ass Pack",
       "CAH: College Pack",
       "CAH: Human Pack",
-      "CAH: Procedurally-Generated Cards",
       "CAH: Hidden Gems Bundle: A Few New Cards We Crammed Into This Bundle Pack (Amazon Exclusive)",
       "Dad Pack",
       "Fantasy Pack",

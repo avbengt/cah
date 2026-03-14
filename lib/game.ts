@@ -60,7 +60,7 @@ export function startRound(game: GameState): GameState {
 }
 
 export function allNonCzarsPlayed(game: GameState): boolean {
-  const nonCzars = game.players.filter((p) => p.id !== game.czarId);
+  const nonCzars = game.players.filter((p) => p.id !== game.czarId && !p.inactive);
   return nonCzars.every((p) =>
     game.played.some((e) => e.playerId === p.id)
   );
